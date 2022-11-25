@@ -30,6 +30,7 @@ executable proj2
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
     build-depends:    base ^>=4.16.3.0
+                    , async >=2.2
                     , stm >=2.5
                     , random >=1.2
     hs-source-dirs:   app

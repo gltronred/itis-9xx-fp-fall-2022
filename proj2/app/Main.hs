@@ -1,11 +1,13 @@
 {-# LANGUAGE NumericUnderscores #-}
 
 import Control.Concurrent
+import Control.Concurrent.Async
 import Control.Concurrent.STM
 import Control.Monad
 import Data.List
 import System.Random
 
+-- Банк: список счетов (пар "фамилия"-"количество денег")
 type TBank = TVar [(String, Int)]
 
 addMoney :: TBank -> String -> Int -> STM ()
@@ -64,11 +66,16 @@ main :: IO ()
 main = do
   bank <- newTVarIO []
 
-  atomically $ addMoney bank "Alice" 1000
-  atomically $ addMoney bank "Bob" 2000
-  atomically $ addMoney bank "Alice" 100
-  atomically $ addMoney bank "Bob" 200
-  atomically $ addMoney bank "Charlie" 3000
+  let actions =
+        [ ("Alice", 1000)
+        , ("Bob", 2000)
+        , ("Alice", 100)
+        , ("Bob", 200)
+        , ("Charlie", 3000)
+        ]
+  forConcurrently_ actions $ \(who,amt) -> do
+    atomically $ addMoney bank who amt
+    printBank ("=== " ++ who ++ " " ++ show amt ++ "==") bank
   printBank "Initial" bank
 
   atomically $ withdraw bank "Dave" 100
@@ -82,10 +89,10 @@ main = do
   accounts <- map fst <$> readTVarIO bank
   oldMoney <- sum . map snd <$> readTVarIO bank
 
-  forM_ [1..100] $ \_ -> forkIO $
-    randomTransfers bank accounts 1000
+  asyncs <- forM [1..100] $ \_ -> async $
+    randomTransfers bank accounts 10000
 
-  threadDelay 3_000_000
+  foldM (\() a -> wait a) () asyncs
 
   newMoney <- sum . map snd <$> readTVarIO bank
   printBank "Random" bank
