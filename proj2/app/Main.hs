@@ -19,24 +19,27 @@ addMoney bank name amount = do
   writeTVar bank newAccs
 
 
-withdraw :: TBank -> String -> Int -> STM ()
+withdraw :: TBank -> String -> Int -> STM Bool
 withdraw bank name amount = do
   accounts <- readTVar bank
   let macctId = findIndex ((==name) . fst) accounts
   case macctId of
-    Nothing -> pure ()
+    Nothing -> pure False
     Just i -> do
       let oldAmt = snd $ accounts!!i
-      when (oldAmt >= amount) $ do
-        let newAccs = take i accounts ++
-                      [(name, oldAmt - amount)] ++
-                      drop (i+1) accounts
-        writeTVar bank newAccs
+      if oldAmt >= amount
+        then do
+          let newAccs = take i accounts ++
+                        [(name, oldAmt - amount)] ++
+                        drop (i+1) accounts
+          writeTVar bank newAccs
+          pure True
+        else pure False
 
 transfer :: TBank -> String -> String -> Int -> STM ()
 transfer bank from to amt = do
-  withdraw bank from amt
-  addMoney bank to   amt
+  b <- withdraw bank from amt
+  when b $ addMoney bank to amt
 
 printBank :: String -> TBank -> IO ()
 printBank prefix bank = do
@@ -53,8 +56,8 @@ randomTransfers bank accounts count = replicateM_ count $ do
   let from = accounts !! f
       to = accounts !! t
   amt <- randomRIO (0,1000)
-  putStrLn $ from ++ "\t->\t" ++ to ++ ":\t" ++ show amt
-  printBank "" bank
+  -- putStrLn $ from ++ "\t->\t" ++ to ++ ":\t" ++ show amt
+  -- printBank "" bank
   atomically $ transfer bank from to amt
 
 main :: IO ()
@@ -78,8 +81,9 @@ main = do
 
   accounts <- map fst <$> readTVarIO bank
   oldMoney <- sum . map snd <$> readTVarIO bank
-  forM_ [1..3] $ \_ -> forkIO $
-    randomTransfers bank accounts 3
+
+  forM_ [1..100] $ \_ -> forkIO $
+    randomTransfers bank accounts 1000
 
   threadDelay 3_000_000
 
