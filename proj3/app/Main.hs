@@ -7,6 +7,10 @@ import Text.Megaparsec.Debug
 import Control.Monad
 import Data.Void
 
+-- Тип парсера (аппликативный функтор):
+--
+-- type Parser a  =  String -> Either Error [(a, String)]
+
 type Parser = Parsec Void String
 
 -- scheme:[//[user:password@]host[:port]][/]path
@@ -30,7 +34,7 @@ data Scheme
   deriving (Eq,Show)
 
 -- http://example.com
--- data://asdasdasdads
+-- data:asdasdasdads
 -- https://user:pass@example.com:1234/asd
 
 schemeParser :: Parser Scheme
