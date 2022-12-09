@@ -52,6 +52,12 @@ domainParser = do
     pass <- some alphaNumChar <?> "password"
     _ <- single '@'
     pure (user, pass)
+    -- достаточно аппликативного функтора:
+    -- (\a b c d -> (a,c))
+    -- <$> some alphaNumChar
+    -- <*> single ':'
+    -- <*> some alphaNumChar
+    -- <*> single '@'
   host <- some (alphaNumChar <|> single '.') <?> "hostname"
   mport <- optional $
     single ':' *>
