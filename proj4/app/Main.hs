@@ -37,9 +37,17 @@ rooms = [ Room{ table=Just $ Table{ legs=3, colour=White }
                         , name="H"
                         , patronym=Just "I"} ]}]
 
--- сломать ножку у каждого стола в каждой комнате
+-- Сломать ножку у каждого стола в каждой комнате
+--
+-- Пример неудобной работы с глубоко вложенными
+-- структурами
 breakTableLeg :: [Room] -> [Room]
-breakTableLeg _ = error "Implement!"
+breakTableLeg rooms =
+  [ r{ table = case table r of
+          Nothing -> Nothing
+          Just t -> Just t{ legs = legs t - 1 }
+     }
+  | r <- rooms ]
 
 main :: IO ()
 main = do
