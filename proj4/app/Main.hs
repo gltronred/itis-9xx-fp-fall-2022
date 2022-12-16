@@ -49,6 +49,18 @@ breakTableLeg rooms =
      }
   | r <- rooms ]
 
+-- Попытка 2: вытаскиваем отдельные функции
+--
+-- Можно ли этот подход обобщить и сделать
+-- композируемым?
+breakTableLeg2 :: [Room] -> [Room]
+breakTableLeg2 = map breakTableInRoom
+  where
+    breakTableInRoom :: Room -> Room
+    breakTableInRoom r = r{table = breakTable<$>table r}
+    breakTable :: Table -> Table
+    breakTable t = t{ legs = legs t - 1 }
+
 main :: IO ()
 main = do
   putStrLn "Hello, Haskell!"
