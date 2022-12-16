@@ -167,7 +167,8 @@ getter2 lens oldStruct
 type LensTry3 f s t a b = (a -> f b) -> s -> f t
 
 breakTableLegWithLenses :: [Room] -> [Room]
-breakTableLegWithLenses = error "Implement!"
+breakTableLegWithLenses rooms
+  = rooms & each . table . _Just . legs %~ (+1)
 
 main :: IO ()
 main = do
