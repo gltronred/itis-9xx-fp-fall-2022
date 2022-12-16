@@ -1,14 +1,21 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Main where
 
+import Data.Functor.Identity
+
+import Control.Lens
+import Control.Lens.TH
+
 data Room = Room
-  { table :: Maybe Table
-  , persons :: [Person]
+  { _table :: Maybe Table
+  , _persons :: [Person]
   }
   deriving (Eq,Show,Read)
 
 data Table = Table
-  { legs :: Int
-  , colour :: Colour
+  { _legs :: Int
+  , _colour :: Colour
   }
   deriving (Eq,Show,Read)
 
@@ -16,26 +23,31 @@ data Colour = White | Red | Green | Blue | Black
   deriving (Eq,Show,Read)
 
 data Person = Person
-  { surname :: String
-  , name :: String
-  , patronym :: Maybe String
+  { _surname :: String
+  , _name :: String
+  , _patronym :: Maybe String
   }
   deriving (Eq,Show,Read)
 
+makeLenses ''Person
+makeLenses ''Colour
+makeLenses ''Table
+makeLenses ''Room
+
 rooms :: [Room]
-rooms = [ Room{ table=Just $ Table{ legs=3, colour=White }
-              , persons=
-                [ Person{ surname="A"
-                        , name="B"
-                        , patronym=Just "C"}
-                , Person{ surname="D"
-                        , name="E"
-                        , patronym=Nothing}]}
-        , Room{ table=Nothing
-              , persons=
-                [ Person{ surname="G"
-                        , name="H"
-                        , patronym=Just "I"} ]}]
+rooms = [ Room{ _table=Just $ Table{ _legs=3, _colour=White }
+              , _persons=
+                [ Person{ _surname="A"
+                        , _name="B"
+                        , _patronym=Just "C"}
+                , Person{ _surname="D"
+                        , _name="E"
+                        , _patronym=Nothing}]}
+        , Room{ _table=Nothing
+              , _persons=
+                [ Person{ _surname="G"
+                        , _name="H"
+                        , _patronym=Just "I"} ]}]
 
 -- Сломать ножку у каждого стола в каждой комнате
 --
@@ -43,9 +55,9 @@ rooms = [ Room{ table=Just $ Table{ legs=3, colour=White }
 -- структурами
 breakTableLeg :: [Room] -> [Room]
 breakTableLeg rooms =
-  [ r{ table = case table r of
+  [ r{ _table = case _table r of
           Nothing -> Nothing
-          Just t -> Just t{ legs = legs t - 1 }
+          Just t -> Just t{ _legs = _legs t - 1 }
      }
   | r <- rooms ]
 
@@ -57,9 +69,9 @@ breakTableLeg2 :: [Room] -> [Room]
 breakTableLeg2 = map breakTableInRoom
   where
     breakTableInRoom :: Room -> Room
-    breakTableInRoom r = r{table = breakTable<$>table r}
+    breakTableInRoom r = r{_table = breakTable<$>_table r}
     breakTable :: Table -> Table
-    breakTable t = t{ legs = legs t - 1 }
+    breakTable t = t{ _legs = _legs t - 1 }
 
 --------------------------------------------------------
 
@@ -122,6 +134,40 @@ _fst1 f (a,b) = (a, (f a, b))
 -- Плохо композируются: из (s -> (a,s)) не очень похоже
 -- на (a -> a)
 
+type LensTry2 f s a = (a -> f a) -> s -> f s
+
+ix2 :: Functor f => Int -> LensTry2 f [a] a
+ix2 idx f list
+  | idx < 0 = error "negative index"
+  | idx>= 0 && null list = error "index too large"
+  | otherwise = case list of
+      old:rest
+        | idx==0 -> (: rest) <$> f old
+        | otherwise -> (old :) <$> ix2 (idx-1) f rest
+
+_fst2 :: Functor f => LensTry2 f (a,b) a
+_fst2 f (a,b) = (\x -> (x,b)) <$> f a
+
+-- Теперь можем эмулировать геттеры и сеттеры, используя
+-- разные функторы:
+
+setter2 :: LensTry2 Identity s a -> a -> s -> s
+setter2 lens new oldStruct
+  = runIdentity $ lens (Identity . const new) oldStruct
+
+getter2 lens oldStruct
+  = fst $ lens (\x -> (x,x)) oldStruct
+
+-- Можем композировать линзы:
+-- > setter2 (_fst2 . ix2 3) 'a' ("hello", 123213)
+-- ("helao",123213)
+-- > getter2 (_fst2 . ix2 2) ("hello", 123213)
+-- 'l'
+
+type LensTry3 f s t a b = (a -> f b) -> s -> f t
+
+breakTableLegWithLenses :: [Room] -> [Room]
+breakTableLegWithLenses = error "Implement!"
 
 main :: IO ()
 main = do
