@@ -169,6 +169,14 @@ type LensTry3 f s t a b = (a -> f b) -> s -> f t
 breakTableLegWithLenses :: [Room] -> [Room]
 breakTableLegWithLenses rooms
   = rooms & each . table . _Just . legs %~ (+1)
+-- В библиотеке (%~) - аналог модификации
+-- Неинфиксный вариант - over
+
+-- В библиотеке инфиксный (.~) - аналог setter2:
+-- > rooms & each . table . _Just . legs .~ 4
+-- Неинфиксный вариант - set:
+-- > set (each . table . _Just . legs) 4 rooms
+
 
 main :: IO ()
 main = do
